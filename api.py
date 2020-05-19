@@ -1,6 +1,9 @@
 from flask import Flask, json, request
 from id_generator import create_id
 import storage
+import time
+import re
+
 
 app = Flask(__name__)
 
@@ -22,6 +25,24 @@ def get_instrument_by_user(user_name):
             users[instrument] = storage.instruments.get(instrument)
     response = app.response_class(response=json.dumps(users), status=200, mimetype="application/json")
     return response
+
+@app.route("/instruments/find/<instruments_name>")
+def find_instrument_by_name(instruments_name):
+    start_time = time.perf_counter()
+    instrumentName = {}
+    for instrument_id in storage.instruments:
+        instrument = storage.instruments[instrument_id]['instrument']
+        match = re.search(instruments_name.lower(), instrument.lower())
+        if match:
+            instrumentName[instrument_id] = storage.instruments[instrument_id]
+    end_time = time.perf_counter()
+    if instrumentName == {}:
+        instrumentName["results"] = "No instruments match your search term."
+    else:
+        instrumentName["searchTimeInMS"] = end_time - start_time
+    response = app.response_class(response=json.dumps(instrumentName), status=200, mimetype="application/json")
+    return response
+
 
 @app.route("/instruments", methods=["POST"])
 def add_instrument():
