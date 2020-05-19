@@ -1,8 +1,11 @@
-from flask import Flask, json, request
+from flask import Flask, json, request, send_file
 from id_generator import create_id
 import storage
 import time
 import re
+from werkzeug.utils import secure_filename
+import os
+import io
 
 
 app = Flask(__name__)
@@ -75,6 +78,24 @@ def add_video_to_instrument(instrument_id):
     response = app.response_class(response=json.dumps(response_body), status=200, mimetype="application/json")
     return response
 
+@app.route('/instruments/upload/<instrument_id>', methods=['GET', 'POST'])
+def upload_img(instrument_id):
+    if request.method == 'POST':
+        f = request.files['data']
+        f.save(f.save('images/' + secure_filename(f.filename)))
+        storage.instruments[instrument_id]["img"] = secure_filename(f.filename)
+        response = app.response_class(response=json.dumps({"status": "OK"}), status=200, mimetype='application/json')
+        return response
+    else:
+        with open(os.path.join('images', (storage.instruments[instrument_id]["img"])), "rb") as bites:
+            return send_file(
+                io.BytesIO(bites.read()),
+                attachment_filename=(storage.instruments[instrument_id]["img"]),
+                mimetype='image/jpg'
+            )
+
+
 
 if __name__ == '__main__':
+    app.config['UPLOAD_FOLDER'] = "c:\\"
     app.run(debug=True)
